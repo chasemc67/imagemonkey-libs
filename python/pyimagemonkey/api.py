@@ -3,6 +3,7 @@ import os
 import math
 from pyimagemonkey.exceptions import *
 import logging
+import json
 
 
 log = logging.getLogger(__name__)
@@ -471,7 +472,12 @@ def _parse_result(data, min_probability):
 	return res
 
 
-
+def getJSONAnnotationForResponse(response):
+	# store the response annotation as json
+	return json.dumps({
+		"uuid": "response.uuid",
+		"annotation": "something"
+	})
 
 
 class API(object):
@@ -555,6 +561,34 @@ class API(object):
 			log.info("Downloading image %s" %(uuid,))
 			with open(filename, 'wb') as f:
 				f.write(response.content)
+		else:
+			raise ImageMonkeyAPIError("couldn't download image %s" %(uuid,))
+
+
+	def download_image_with_annotation(self, uuid, folder, extension=".jpg"):
+		if not os.path.isdir(folder):
+			raise ImageMonkeyGeneralError("folder %s doesn't exist" %(folder,))
+
+		# make dir in folder named UUID if it doesn't exist
+		uuidDir = folder + os.path.sep + uuid
+		if not os.path.isdir(uuidDir):
+			os.makedirs(uuidDir)
+
+
+		imageFileName = uuidDir + os.path.sep + uuid + extension
+		annotationFileName = uuidDir + os.path.sep + uuid + ".json"
+		if os.path.exists(imageFileName):
+			return
+			raise ImageMonkeyGeneralError("image %s already exists in folder %s" %(uuid,folder))
+
+		url = self._base_url + "v" + str(self._api_version) + "/donation/" + uuid
+		response = requests.get(url)
+		if response.status_code == 200:
+			log.info("Downloading image %s" %(uuid,))
+			with open(imageFileName, 'wb') as f:
+				f.write(response.content)
+			with open(annotationFileName, 'w') as f:
+				f.write(getJSONAnnotationForResponse(response))
 		else:
 			raise ImageMonkeyAPIError("couldn't download image %s" %(uuid,))
 
