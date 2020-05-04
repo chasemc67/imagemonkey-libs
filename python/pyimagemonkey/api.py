@@ -472,24 +472,7 @@ def _parse_result(data, min_probability):
 	return res
 
 
-def getJSONAnnotationForResponse(response):
-	# store the response annotation as json
-	#data = response.json()
 
-	# for elem in data:
-	# 	uuid = elem["uuid"]
-	# 	width = elem["width"]
-	# 	height = elem["height"]
-	# 	raw_annotations = elem["annotations"]
-	# 	raw_validations = elem["validations"]
-	#
-	# 	for raw_annotation in raw_annotations:
-	# 		if (raw_annotation)
-
-	return json.dumps({
-		"uuid": "response.uuid",
-		"annotation": "something"
-	})
 
 
 class API(object):
@@ -537,6 +520,29 @@ class API(object):
 		data = r.json()
 		return data
 
+	def export_to_folder(self, labels, rootFolder, min_probability=0.8, only_annotated=False):
+		query = ""
+		for x in range(len(labels)):
+			query += labels[x]
+			if (x != (len(labels) - 1)):
+				query += "|"
+		url = self._base_url + "v" + str(self._api_version) + "/export"
+		params = {"query": query}
+
+		if only_annotated:
+			params["annotations_only"] = "true"
+
+		r = requests.get(url, params=params)
+		if (r.status_code == 500):
+			raise InternalImageMonkeyAPIError("Could not perform operation, please try again later")
+		elif (r.status_code != 200):
+			data = r.json()
+			raise ImageMonkeyAPIError(data["error"])
+
+		data = r.json()
+
+		self.save_result(data, rootFolder)
+
 	def export(self, labels, min_probability=0.8, only_annotated=False):
 		query = ""
 		for x in range(len(labels)):
@@ -558,6 +564,25 @@ class API(object):
 
 		data = r.json()
 		return _parse_result(data, min_probability)
+
+	def save_result(self, data, rootFolder, verbose=True):
+		if not os.path.isdir(rootFolder):
+			raise ImageMonkeyGeneralError("folder %s doesn't exist" % (folder,))
+
+		ctr = 1
+		for elem in data:
+			uuid = elem["uuid"]
+			if verbose:
+				print("[%d/%d] Downloading image %s" % (ctr, len(data), uuid))
+			uuidDir = rootFolder + os.path.sep + uuid
+			if os.path.isdir(uuidDir):
+				continue
+			os.makedirs(uuidDir)
+			self.download_image(uuid, uuidDir)
+			annotationFileName = uuidDir + os.path.sep + uuid + ".json"
+			with open(annotationFileName, 'w') as f:
+				json.dump(data, f)
+			ctr += 1
 
 	def download_image(self, uuid, folder, extension=".jpg"):
 		if not os.path.isdir(folder):
