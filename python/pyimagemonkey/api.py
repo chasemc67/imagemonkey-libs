@@ -474,6 +474,18 @@ def _parse_result(data, min_probability):
 
 def getJSONAnnotationForResponse(response):
 	# store the response annotation as json
+	#data = response.json()
+
+	# for elem in data:
+	# 	uuid = elem["uuid"]
+	# 	width = elem["width"]
+	# 	height = elem["height"]
+	# 	raw_annotations = elem["annotations"]
+	# 	raw_validations = elem["validations"]
+	#
+	# 	for raw_annotation in raw_annotations:
+	# 		if (raw_annotation)
+
 	return json.dumps({
 		"uuid": "response.uuid",
 		"annotation": "something"
